@@ -1,0 +1,13 @@
+torch
+torchvision
+numpy<2.0  # to avoid numpy 2.0 incompatibility on macOS with torch 2.2 (remove when not using a mac with a higher version of torch)
+pandas
+scikit-learn
+scipy
+matplotlib
+seaborn
+tqdm
+pillow
+shap
+jupyter
+ipywidgets
