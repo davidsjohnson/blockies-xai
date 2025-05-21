@@ -1,0 +1,3 @@
+[submodule "zennit-crp"]
+	path = zennit-crp
+	url = git@github.com:davidsjohnson/zennit-crp.git
