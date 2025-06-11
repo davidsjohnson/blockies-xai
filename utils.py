@@ -80,6 +80,28 @@ def load_dataframe(data_dir: Union[str, Path],
   
   return df
 
+
+def load_dataframe_old(data_dir: Union[str, Path], 
+                       dataset: str) -> pd.DataFrame:
+  """
+  Load the blocky dataframe from the specified dataset directory.  used for 
+  datasets created with the previous version of Blockies that isn't based on
+  object name and already has the 'ill' column.
+  
+  Parameters:
+    data_dir (str or Path): The directory where the dataset is stored.  
+    dataset (str): The name of the dataset to load.
+  
+  Returns:
+    pd.DataFrame: A DataFrame containing the dataset parameters.
+  """
+
+  data_dir = data_dir / dataset
+  df = pd.read_json(data_dir / 'parameters.jsonl', lines=True)
+  df['filename'] = df['id'] + '.png'
+  
+  return df
+
 def load_imgs(paths: List[Union[str, Path]]) -> List[Image.Image]:
   """ Load images from a list of file paths.
   Parameters: 
