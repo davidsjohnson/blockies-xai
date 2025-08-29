@@ -1,4 +1,5 @@
 two4two_sickones_models_pytorch/
 data/
+output/
 ResNet_Blockies/
 blockies-xai/
