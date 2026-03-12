@@ -11,13 +11,17 @@ import shutil
 CLASSES = ['Healthy', 'OCDegen']
 
 XAICOLS_MAP = {
-    'concept': ['Example1', 'Example2', 'Example3', 'Example4'],
-    'example': ['Example1', 'Example2', 'Example3'],
+    'concept': ['Concept1_Salience', 'Concept2_Salience', 'Concept3_Salience', 'Concept4_Salience', 'Concept5_Salience', 'contribution_plot'],
+    # 'concept': ['Example1', 'Example2', 'Example3', 'Example4'],
+    'example': ['Example1', 'Example2', 'Example3', 'Example4'],
+    'cfs': ['Example1', 'Example2', 'Example3'],
     'feature': ['Shap'],
     'none': []
 }
 
 def shuffle_dataset(df, n_correct, random_state=9):
+  
+  assert n_correct % 2 == 0, "n_correct must be even"
 
   # get n correct instances for beginning of df
   correct_df = df[df['TRUE_DIAG'] == df['SUGGESTED_DIAG']]
@@ -36,9 +40,18 @@ def shuffle_dataset(df, n_correct, random_state=9):
   return final_df
 
 def split_dataset(df, random_state=9):
-   # Split the df into two equal sets with the same distribution of TRUE_DIAG, SUGGESTED_DIAG combinations
-   df1 = df.groupby(['TRUE_DIAG', 'SUGGESTED_DIAG']).sample(frac=0.5, random_state=random_state)
-   df2 = df.drop(df1.index)
+   
+   if 'PHASE' in df.columns:
+        print("Splitting dataset based on PHASE column.")
+        # Split based on PHASE column if it exists
+        df1 = df[df['PHASE'] == 1]
+        df2 = df[df['PHASE'] == 2]
+   else:
+        print("Splitting dataset using stratified sampling.")
+        # otherwise, perform stratified split
+        # Split the df into two equal sets with the same distribution of TRUE_DIAG, SUGGESTED_DIAG combinations
+        df1 = df.groupby(['TRUE_DIAG', 'SUGGESTED_DIAG']).sample(frac=0.5, random_state=random_state)
+        df2 = df.drop(df1.index)
 
    return df1, df2
 
@@ -68,10 +81,10 @@ def _print_nicely(title, df, n=10):
     print()
 
 
-def main(input_folder, output_folder, xai_type, random_state=9):
+def main(input_folder, output_folder, xai_type, n_correct=4, random_state=9):
 
     input_csv = input_folder / ("input_example.csv" if xai_type != 'feature' else "input_saliency.csv")
-    input_zip = input_folder / "study_images_example.zip"
+    input_zip = input_folder / "study_images.zip" if xai_type != 'concept' else input_folder / "study_images_example.zip"
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -82,8 +95,11 @@ def main(input_folder, output_folder, xai_type, random_state=9):
     # order by image so splitting preserves that order
     df = df.sort_values(by='X_RAY_IMAGE').reset_index(drop=True)
     phase1_df, phase2_df = split_dataset(df, random_state=random_state)
-    phase1_df = shuffle_dataset(phase1_df, n_correct=3, random_state=random_state)
-    phase2_df = shuffle_dataset(phase2_df, n_correct=3, random_state=random_state)
+    phase1_df = shuffle_dataset(phase1_df, n_correct=n_correct, random_state=random_state)
+    phase2_df = shuffle_dataset(phase2_df, n_correct=n_correct, random_state=random_state)
+
+    assert phase1_df.iloc[:n_correct]['TRUE_DIAG'].equals(phase1_df.iloc[:n_correct]['SUGGESTED_DIAG']), f"First {n_correct} samples in phase 1 are not correct"
+    assert phase2_df.iloc[:n_correct]['TRUE_DIAG'].equals(phase2_df.iloc[:n_correct]['SUGGESTED_DIAG']), f"First {n_correct} samples in phase 2 are not correct"
 
     # display output
     # Improve console display for pandas DataFrames
@@ -136,7 +152,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split dataset into two phases and package images.")
     parser.add_argument("--input_folder", type=Path, required=True, help="Path to the input folder")
     parser.add_argument("--output_folder", type=Path, required=True, help="Output folder path")
-    parser.add_argument("--xai_type", type=str, choices=['concept', 'example', 'feature', 'none'], default='example', help="Type of XAI explanations to include")
+    parser.add_argument("--xai_type", type=str, choices=['concept', 'example', 'feature', 'none', 'cfs'], default='example', help="Type of XAI explanations to include")
+    parser.add_argument("--n_correct", type=int, default=4, help="Number of correct samples to include in each phase")
     args = parser.parse_args()
 
-    main(args.input_folder, args.output_folder, xai_type=args.xai_type)
+    main(args.input_folder, args.output_folder, n_correct=args.n_correct, xai_type=args.xai_type)
